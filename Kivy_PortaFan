@@ -1,0 +1,112 @@
+from kivymd.app import MDApp
+from kivymd.uix.button import MDRectangleFlatButton
+from kivy.lang import Builder
+from ctypes import windll, c_int64
+from kivymd.uix.textfield import MDTextField
+from kivy.uix.screenmanager import ScreenManager
+from kivy.uix.screenmanager import Screen
+import requests
+from bs4 import BeautifulSoup
+import re
+import schedule
+import time
+import lxml
+import cchardet
+import threading
+# Makes text crisp
+windll.user32.SetProcessDpiAwarenessContext(c_int64(-4))
+
+country_helper = """
+MDTextField:
+    name: 'country'
+    hint_text: "Enter State/Providence/Region"
+    pos_hint: {'center_x': 0.5, 'center_y': 0.7}
+    size_hint_x: None
+    width: 200
+"""
+city_helper = """
+MDTextField:
+    name: 'city'
+    hint_text: "Enter City"
+    pos_hint: {'center_x': 0.5, 'center_y': 0.6}
+    size_hint_x: None
+    width: 200
+"""
+
+class PortFanApp(MDApp):
+
+    def build(self):
+        screen = Screen()
+        self.city = Builder.load_string(city_helper)
+        self.country = Builder.load_string(country_helper)
+        button = MDRectangleFlatButton(text= 'Confirm',
+                              pos_hint= {'center_x': 0.5, 'center_y': 0.5},
+                              on_release= self.getTemp)
+
+        screen.add_widget(self.city)
+        screen.add_widget(self.country)
+        screen.add_widget(button)
+        return screen
+
+
+    def getTemp(self, obj):
+        threading.Timer(1800, self.getTemp).start()
+        list = self.country.text.split()
+        list += self.city.text.split()
+        URL = "https://www.google.com/search?q=" + "weather+"
+        for i in list:
+            URL += i + "+"
+        html = requests.get(URL).text
+        soup = BeautifulSoup(html, 'lxml')
+
+        global temp
+        temp = soup.find('div', attrs={'class': 'BNeawe iBp4i AP7Wnd'}).text
+        #Contains time and sky conditions
+        str = soup.find('div', attrs={'class': 'BNeawe tAd8D AP7Wnd'}).text
+        data = str.split('\n')
+        time = data[0]
+
+        listdiv = soup.findAll('div', attrs={'class': 'BNeawe s3v9rd AP7Wnd'})
+        strd = listdiv[5].text
+
+        print("Temperature is", temp)
+        print("Time: ", time)
+        self.timeList = time.split()
+        self.setSpeed(temp)
+
+    def setSpeed(self, obj):
+        if obj[3] == "F":
+            num = re.findall(r'\d+',obj)
+            num = num[0]
+            temp = (int(num) - 32) * 5/9
+            temp = int(temp + 0.5)
+            print(temp)
+
+        if temp < 20:
+            self.speed = 1
+        elif temp >= 20 and temp < 22:
+            self.speed = 2
+        elif temp >= 22 and temp < 24:
+            self.speed = 3
+        elif temp >= 24 and temp < 26:
+            self.speed = 4
+        elif temp >= 26 and temp < 28:
+            self.speed = 5
+        elif temp >= 28 and temp < 30:
+            self.speed = 6
+        elif temp >= 30 and temp < 32:
+            self.speed = 7
+        elif temp >= 32 and temp < 34:
+            self.speed = 8
+        elif temp >= 34 and temp < 36:
+            self.speed = 9
+        elif temp >= 36 and temp < 38:
+            self.speed = 10
+        elif temp >= 38 and temp < 40:
+            self.speed = 11
+        else:
+            self.speed = 12
+        print (self.speed)
+
+
+PortFanApp().run()
